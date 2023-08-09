@@ -28,8 +28,8 @@
   "devDependencies": {
     "@armscye/core": "0.1.0",
     "@armscye/module": "0.1.0",
-    "@commitlint/cli": "17.6.7",
-    "@commitlint/config-conventional": "17.6.7",
+    "@commitlint/cli": "17.7.0",
+    "@commitlint/config-conventional": "17.7.0",
     "@types/jest": "29.5.3",
     "@types/node": "18.17.4",
     "@typescript-eslint/eslint-plugin": "6.3.0",
