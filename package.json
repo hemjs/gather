@@ -21,7 +21,7 @@
     "release": "release-it"
   },
   "dependencies": {
-    "@hemjs/notions": "0.1.5",
+    "@hemjs/notions": "0.1.7",
     "glob": "10.3.3",
     "uid": "2.0.2"
   },
