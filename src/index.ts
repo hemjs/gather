@@ -1,3 +1,3 @@
 export { Gather } from './gather';
-export { loadFromFiles } from './load-from-files';
+export { merge } from './util/merge';
 export type { Provider } from './types';

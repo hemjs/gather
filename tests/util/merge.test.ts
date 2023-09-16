@@ -1,4 +1,4 @@
-import { merge } from '../../src/util/merge';
+import { merge } from '../../src';
 
 describe('marge', () => {
   it('should return empty object when absent target and absent source', () => {
