@@ -1,4 +1,4 @@
 import type { Type } from '@armscye/core';
 import type { Module } from '@armscye/module';
 
-export type Provider = Type<Module> | Function | Record<string, any>;
+export type ConfigProvider = Type<Module> | Function | Record<string, any>;

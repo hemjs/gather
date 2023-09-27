@@ -3,7 +3,7 @@ import type { Module } from '@armscye/module';
 import { isFunction, isObject, isPlainObject } from '@hemjs/notions';
 import { uid } from 'uid';
 
-import type { Provider } from './types';
+import type { ConfigProvider } from './types';
 import { merge } from './util/merge';
 
 /**
@@ -16,7 +16,7 @@ export class Gather {
    * Create a new Gather instance.
    * @param providers the configuration providers
    */
-  constructor(providers: Array<Provider> = []) {
+  constructor(providers: Array<ConfigProvider> = []) {
     this.config = this.loadFromProviders(providers);
   }
 
@@ -33,7 +33,9 @@ export class Gather {
    * @param providers an array of configuration providers
    * @returns merged configurations object
    */
-  private loadFromProviders(providers: Array<Provider>): Record<string, any> {
+  private loadFromProviders(
+    providers: Array<ConfigProvider>,
+  ): Record<string, any> {
     const merged: Record<string, any> = {};
     for (const provider of providers) {
       const instance = this.resolveProvider(provider);
@@ -51,7 +53,7 @@ export class Gather {
    * @param providers an array of configuration providers
    * @returns merged configurations object
    */
-  private resolveProvider(provider: Provider): Provider {
+  private resolveProvider(provider: ConfigProvider): ConfigProvider {
     if (isObject(provider)) {
       return provider;
     }
@@ -71,7 +73,7 @@ export class Gather {
    * @param provider the provider to check
    * @returns true if class, false otherwise
    */
-  private isProviderClass(provider: Provider): provider is Type<any> {
+  private isProviderClass(provider: ConfigProvider): provider is Type<any> {
     const providerStr = provider.toString();
     if (providerStr.substring(0, 5) === 'class') {
       return true;
@@ -84,7 +86,7 @@ export class Gather {
    * @param provider the provider to check
    * @returns whether the given provider has the register method
    */
-  private isModuleProvider(provider: Provider): provider is Module {
+  private isModuleProvider(provider: ConfigProvider): provider is Module {
     return isFunction((provider as Module).register);
   }
 
