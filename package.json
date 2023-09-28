@@ -27,7 +27,7 @@
   "devDependencies": {
     "@armscye/core": "0.1.0",
     "@armscye/module": "0.1.1",
-    "@commitlint/cli": "17.7.1",
+    "@commitlint/cli": "17.7.2",
     "@commitlint/config-conventional": "17.7.0",
     "@types/jest": "29.5.5",
     "@types/node": "18.18.0",
