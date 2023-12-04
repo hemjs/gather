@@ -1,6 +1,6 @@
 {
   "name": "@hemjs/gather",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Collect and merge configuration from different sources",
   "author": "Augustus Kamau",
   "license": "MIT",
