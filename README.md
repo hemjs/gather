@@ -33,7 +33,7 @@ Then, create a new `Gather` instance by passing an array of configuration provid
 import { Gather } from '@hemjs/gather';
 import { Module } from '@armscye/module';
 
-class RbacModule implements Module {
+class RoleModule implements Module {
   register() {
     return {
       roles: {
