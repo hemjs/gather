@@ -1,7 +1,7 @@
 {
   "name": "@hemjs/gather",
   "version": "0.3.4",
-  "description": "Collect and merge configuration from different sources",
+  "description": "Lightweight library for collecting and merging configuration from multiple sources",
   "author": "Augustus Kamau",
   "license": "MIT",
   "keywords": [
