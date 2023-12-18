@@ -4,6 +4,7 @@
 
 ## Table of contents
 
+- [Installation](#installation)
 - [Quick start](#quick-start)
 - [Introduction](#introduction)
 - [Features](#features)
@@ -11,45 +12,26 @@
 - [Merge behavior](#merge-behavior)
 - [Tips](#tips)
 
-## Quick start
+## Installation
 
-First add the dependency to your project:
-
-Using npm:
+Install with npm:
 
 ```sh
 npm install --save @hemjs/gather
 ```
 
-or using yarn:
+Install with yarn:
 
 ```sh
 yarn add @hemjs/gather
 ```
 
-Then, create a new `Gather` instance by passing an array of configuration providers to its constructor:
+## Quick start
 
 ```ts
 import { Gather } from '@hemjs/gather';
-import { Module } from '@armscye/module';
-
-class RoleModule implements Module {
-  register() {
-    return {
-      roles: {
-        admin: {
-          permissions: ['users:manage', 'users:delete'],
-        },
-        editor: {
-          permissions: ['articles:edit', 'articles:publish'],
-        },
-      },
-    };
-  }
-}
 
 const gather = new Gather([
-  RoleModule,
   {
     port: parseInt(process.env.PORT, 10) || 3000,
   },
@@ -75,14 +57,6 @@ const config = gather.getMerged();
 
 //  Will print:
 //  {
-//    roles: {
-//      admin: {
-//        permissions: ['users:manage', 'users:delete'],
-//      },
-//      editor: {
-//        permissions: ['articles:edit', 'articles:publish'],
-//      },
-//    },
 //    port: 3000,
 //    database: {
 //      host: 'localhost',
@@ -105,8 +79,6 @@ Using Gather library offers several benefits:
 - **Conflict resolution:** Reliable merging and conflict resolution ensure predictable behavior and consistent settings.
 
 Defining a configuration consists of constructing a `Gather` and merging objects and joining arrays from any number of providers.
-
-Gather throws errors for invalid providers or during merging inconsistencies. Check the console for helpful error messages.
 
 ## Features
 
