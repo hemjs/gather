@@ -41,4 +41,4 @@ scripts
 jest.config.json
 renovate.json
 tsconfig.json
-
+tsconfig.build.json
