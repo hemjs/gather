@@ -1,6 +1,6 @@
 {
   "name": "@hemjs/gather",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight library for collecting and merging configuration from multiple sources",
   "author": "Augustus Kamau",
   "license": "MIT",
@@ -21,19 +21,19 @@
     "release": "release-it"
   },
   "dependencies": {
-    "@hemjs/notions": "1.0.0",
+    "@hemjs/notions": "1.0.1",
     "uid": "2.0.2"
   },
   "devDependencies": {
-    "@armscye/core": "0.3.0",
-    "@armscye/module": "0.3.0",
+    "@armscye/core": "0.4.0",
+    "@armscye/module": "0.4.0",
     "@commitlint/cli": "18.6.1",
     "@commitlint/config-conventional": "18.6.2",
     "@types/jest": "29.5.12",
-    "@types/node": "20.11.19",
+    "@types/node": "20.11.20",
     "@typescript-eslint/eslint-plugin": "7.0.2",
     "@typescript-eslint/parser": "7.0.2",
-    "eslint": "8.56.0",
+    "eslint": "8.57.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-simple-import-sort": "12.0.0",
