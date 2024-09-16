@@ -2,7 +2,7 @@ import { isNil, isObject } from '@hemjs/notions';
 
 export function merge(
   target?: Record<string, any>,
-  ...sources: Array<{} | undefined | null>
+  ...sources: Array<object | undefined | null>
 ): Record<string, any> {
   target = target || {};
   for (let i = 0; i < sources.length; i++) {
