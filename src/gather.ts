@@ -1,6 +1,6 @@
 import type { Type } from '@armscye/core';
 import type { Module } from '@armscye/module';
-import { isFunction, isObject, isPlainObject } from '@hemjs/notions';
+import { isClass, isFunction, isObject, isPlainObject } from '@hemjs/notions';
 import { uid } from 'uid';
 
 import { merge } from './utils';
@@ -61,7 +61,7 @@ export class Gather {
     if (isObject(provider)) {
       return provider;
     }
-    if (this.isProviderClass(provider)) {
+    if (isClass(provider)) {
       const typeProvider = provider as Type<any>;
       return new typeProvider();
     }
@@ -70,19 +70,6 @@ export class Gather {
     }
     const metatype = this.mapToClass(provider);
     return new metatype();
-  }
-
-  /**
-   * Check if the given provider is a class.
-   * @param provider the provider to check
-   * @returns true if class, false otherwise
-   */
-  private isProviderClass(provider: ConfigProvider): provider is Type<any> {
-    const providerStr = provider.toString();
-    if (providerStr.substring(0, 5) === 'class') {
-      return true;
-    }
-    return false;
   }
 
   /**
