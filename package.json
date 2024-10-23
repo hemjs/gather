@@ -18,7 +18,8 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "prerelease": "npm run prebuild && npm run build",
-    "release": "release-it"
+    "release": "release-it",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hemjs/notions": "1.2.0",
@@ -29,6 +30,7 @@
     "@armscye/module": "0.4.0",
     "@commitlint/cli": "19.5.0",
     "@commitlint/config-conventional": "19.5.0",
+    "@eslint/js": "^9.13.0",
     "@types/jest": "29.5.13",
     "@types/node": "20.16.14",
     "@typescript-eslint/eslint-plugin": "8.11.0",
@@ -36,6 +38,7 @@
     "eslint": "9.13.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-simple-import-sort": "12.1.1",
     "husky": "9.1.6",
     "jest": "29.7.0",
@@ -44,7 +47,8 @@
     "release-it": "17.10.0",
     "rimraf": "6.0.1",
     "ts-jest": "29.2.5",
-    "typescript": "5.6.3"
+    "typescript": "5.6.3",
+    "typescript-eslint": "^8.11.0"
   },
   "homepage": "https://github.com/hemjs/gather#readme",
   "bugs": {
