@@ -78,7 +78,7 @@ export class Gather {
    * @returns whether the given provider has the register method
    */
   private isModuleProvider(provider: ConfigProvider): provider is Module {
-    return isFunction((provider as Module).register);
+    return isFunction((provider as Module).register.bind(provider));
   }
 
   /**
