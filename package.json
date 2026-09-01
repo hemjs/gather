@@ -22,7 +22,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@hemjs/notions": "1.2.7",
+    "@hemjs/notions": "2.0.0",
     "uid": "2.0.2"
   },
   "devDependencies": {
