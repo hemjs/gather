@@ -14,17 +14,21 @@
 
 ## Installation
 
-Install with npm:
+Gather is published as an ES module and requires Node.js 22.12 or later.
 
 ```sh
-npm install --save @hemjs/gather
+npm install @hemjs/gather
 ```
 
-Install with yarn:
+```sh
+pnpm add @hemjs/gather
+```
 
 ```sh
 yarn add @hemjs/gather
 ```
+
+CommonJS code can still load it with `require()`, which Node.js 22.12 and later support for ES modules.
 
 ## Quick start
 

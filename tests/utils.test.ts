@@ -1,4 +1,6 @@
-import { merge } from '../src';
+import { describe, expect, it } from 'vitest';
+
+import { merge } from '../src/index.js';
 
 describe('marge', () => {
   it('should return empty object when absent target and absent source', () => {

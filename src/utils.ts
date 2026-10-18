@@ -13,7 +13,7 @@ export function merge(
         const value = source[key];
         if (Array.isArray(value)) {
           obj = isNil(obj) ? [] : obj;
-          target[key] = obj.concat(value);
+          target[key] = (obj as unknown[]).concat(value);
         } else if (isObject(obj) && isObject(value)) {
           target[key] = { ...obj, ...value };
         } else {

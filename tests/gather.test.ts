@@ -1,7 +1,9 @@
-import { Gather } from '../src';
-import { BarProvider } from './fixtures/bar.provider';
-import { FooProvider } from './fixtures/foo.provider';
-import { NoopProvider } from './fixtures/noop.provider';
+import { expect, test } from 'vitest';
+
+import { Gather } from '../src/index.js';
+import { BarProvider } from './fixtures/bar.provider.js';
+import { FooProvider } from './fixtures/foo.provider.js';
+import { NoopProvider } from './fixtures/noop.provider.js';
 
 test('should return an instance of Gather', () => {
   const gather = new Gather();
