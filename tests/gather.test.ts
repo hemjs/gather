@@ -1,3 +1,5 @@
+import { expect, test } from 'vitest';
+
 import { Gather } from '../src/index.js';
 import { BarProvider } from './fixtures/bar.provider.js';
 import { FooProvider } from './fixtures/foo.provider.js';

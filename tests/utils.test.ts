@@ -1,3 +1,5 @@
+import { describe, expect, it } from 'vitest';
+
 import { merge } from '../src/index.js';
 
 describe('marge', () => {
