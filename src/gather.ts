@@ -42,7 +42,7 @@ export class Gather {
     for (const provider of providers) {
       const instance = this.resolveProvider(provider);
       if (this.isModuleProvider(instance)) {
-        merge(merged, (instance as any).register());
+        merge(merged, instance.register());
       } else if (isPlainObject(instance)) {
         merge(merged, instance);
       }
@@ -76,7 +76,7 @@ export class Gather {
    * @returns whether the given provider has the register method
    */
   private isModuleProvider(provider: ConfigProvider): provider is Module {
-    return isFunction((provider as Module).register);
+    return isFunction((provider as Record<string, unknown>)['register']);
   }
 
   /**
