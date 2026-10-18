@@ -3,7 +3,7 @@ import type { Module } from '@armscye/module';
 import { isClass, isFunction, isObject, isPlainObject } from '@hemjs/notions';
 import { uid } from 'uid';
 
-import { merge } from './utils';
+import { merge } from './utils.js';
 
 export type ConfigProvider =
   Type<Module> | Record<string, any> | ((...args: any[]) => any);
