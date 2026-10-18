@@ -9,7 +9,7 @@
     "publish": true
   },
   "hooks": {
-    "before:init": ["npm run test"],
-    "after:bump": ["npm run prerelease"]
+    "before:init": ["pnpm run test"],
+    "after:bump": ["pnpm run prerelease"]
   }
 }

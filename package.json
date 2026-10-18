@@ -42,7 +42,7 @@
     "test": "vitest run",
     "test:cov": "vitest run --coverage",
     "test:watch": "vitest",
-    "prerelease": "npm run prebuild && npm run build",
+    "prerelease": "pnpm run prebuild && pnpm run build",
     "release": "release-it",
     "prepare": "husky"
   },
@@ -71,6 +71,7 @@
     "typescript-eslint": "8.71.0",
     "vitest": "5.0.5"
   },
+  "packageManager": "pnpm@12.11.2",
   "engines": {
     "node": ">=22.12.0"
   },
