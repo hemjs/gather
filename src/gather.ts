@@ -77,14 +77,15 @@ export class Gather {
     providers: Array<ConfigProvider>,
   ): Record<string, any> {
     const merged: Record<string, any> = {};
-    providers.forEach((provider, index) => {
+    // Array.from turns holes into undefined, so they are reported, not skipped.
+    for (const [index, provider] of Array.from(providers).entries()) {
       const instance = this.resolveProvider(provider, index);
       if (this.isModuleProvider(instance)) {
         merge(merged, this.assertConfig(instance.register(), index));
       } else if (isPlainObject(instance)) {
         merge(merged, instance);
       }
-    });
+    }
     return merged;
   }
 

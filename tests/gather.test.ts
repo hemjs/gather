@@ -155,3 +155,12 @@ test('should treat an object with a register function as a module', () => {
 
   expect(gather.getMerged()).toEqual({ foo: 'bar' });
 });
+
+test('should throw when the provider list has holes', () => {
+  const providers: ConfigProvider[] = [{}];
+  providers[2] = {};
+
+  expect(() => new Gather(providers)).toThrow(
+    'Invalid config provider at index 1: expected a class, function or object, got undefined',
+  );
+});
