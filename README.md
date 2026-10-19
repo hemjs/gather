@@ -153,7 +153,7 @@ Any object with a `register` method is treated as a module, including a plain ob
 
 ### Errors
 
-Gather throws when a provider is not a class, function or object, when it is an array, or when it produces something other than a plain object. The message names the position of the provider in the list:
+Gather throws when a provider is not a class, function or object, when it is an array or a Promise, or when it produces something other than a plain object, including a class instance. The message names the position of the provider in the list:
 
 ```txt
 Invalid config provider at index 1: expected a class, function or object, got number

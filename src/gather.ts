@@ -20,13 +20,20 @@ function isClass(value: unknown): value is Type<Module> {
 }
 
 /**
+ * Check if the given value is a Promise or another thenable.
+ */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return isFunction((value as { then?: unknown } | null)?.then);
+}
+
+/**
  * Describe a value for an error message.
  */
 function describeValue(value: unknown): string {
   if (Array.isArray(value)) {
     return 'an array';
   }
-  if (isFunction((value as { then?: unknown } | null)?.then)) {
+  if (isThenable(value)) {
     return 'a Promise (async providers are not supported)';
   }
   if (value === null) {
@@ -94,6 +101,11 @@ export class Gather {
     if (Array.isArray(provider)) {
       throw new Error(
         `Invalid config provider at index ${index}: got an array; pass its items as separate providers`,
+      );
+    }
+    if (isThenable(provider)) {
+      throw new Error(
+        `Invalid config provider at index ${index}: got ${describeValue(provider)}`,
       );
     }
     if (isClass(provider)) {

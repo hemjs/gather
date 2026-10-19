@@ -105,6 +105,22 @@ test('should throw when async provider', () => {
   );
 });
 
+test('should throw when a promise is passed as a provider', () => {
+  expect(() => new Gather([{}, Promise.resolve({ foo: 'bar' })])).toThrow(
+    'Invalid config provider at index 1: got a Promise (async providers are not supported)',
+  );
+});
+
+test('should throw when provider returns a class instance', () => {
+  class DbConfig {
+    host = 'localhost';
+  }
+
+  expect(() => new Gather([() => new DbConfig()])).toThrow(
+    'expected a plain object, got an instance of DbConfig',
+  );
+});
+
 test('should throw when provider returns a non-object', () => {
   expect(() => new Gather([() => ['foo']])).toThrow('got an array');
   expect(() => new Gather([{ register: () => 'foo' }])).toThrow('got string');
