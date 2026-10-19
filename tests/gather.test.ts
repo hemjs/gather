@@ -85,3 +85,45 @@ test('should concatenate when array providers', () => {
 test('should throw when invalid provider', () => {
   expect(() => new Gather(['invalid-provider' as any])).toThrow();
 });
+
+test('should throw with the index when invalid provider', () => {
+  expect(() => new Gather([{}, 42 as any])).toThrow(
+    'Invalid config provider at index 1: expected a class, function or object, got number',
+  );
+  expect(() => new Gather([null as any])).toThrow('got null');
+});
+
+test('should throw when array provider', () => {
+  expect(() => new Gather([[{ foo: 'bar' }]])).toThrow(
+    'Invalid config provider at index 0: got an array',
+  );
+});
+
+test('should throw when async provider', () => {
+  expect(() => new Gather([() => Promise.resolve({ foo: 'bar' })])).toThrow(
+    'Invalid config from provider at index 0: expected a plain object, got a Promise',
+  );
+});
+
+test('should throw when provider returns a non-object', () => {
+  expect(() => new Gather([() => ['foo']])).toThrow('got an array');
+  expect(() => new Gather([{ register: () => 'foo' }])).toThrow('got string');
+  expect(() => new Gather([() => new Date()])).toThrow(
+    'got an instance of Date',
+  );
+  expect(() => new Gather([() => Object.create(Object.create(null))])).toThrow(
+    'got an object',
+  );
+});
+
+test('should skip providers that return nothing', () => {
+  const gather = new Gather([() => undefined, BarProvider]);
+
+  expect(gather.getMerged()).toEqual({ bar: 'bat' });
+});
+
+test('should treat an object with a register function as a module', () => {
+  const gather = new Gather([{ register: () => ({ foo: 'bar' }), baz: 1 }]);
+
+  expect(gather.getMerged()).toEqual({ foo: 'bar' });
+});
