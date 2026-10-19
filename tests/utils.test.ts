@@ -53,6 +53,20 @@ describe('merge', () => {
     expect(merge({ foo: 'bar' }, { foo: null })).toEqual({ foo: 'bar' });
   });
 
+  it('should replace a non-array value with a source array', () => {
+    expect(merge({ foo: 'bar' }, { foo: ['baz'] })).toEqual({ foo: ['baz'] });
+    expect(merge({ foo: 1 }, { foo: ['baz'] })).toEqual({ foo: ['baz'] });
+    expect(merge({ foo: { bar: 1 } }, { foo: ['baz'] })).toEqual({
+      foo: ['baz'],
+    });
+  });
+
+  it('should replace an array with a source object', () => {
+    expect(merge({ foo: ['bar'] }, { foo: { baz: 1 } })).toEqual({
+      foo: { baz: 1 },
+    });
+  });
+
   it('should merge nested objects recursively', () => {
     expect(
       merge(
@@ -60,6 +74,15 @@ describe('merge', () => {
         { db: { options: { port: 1, tags: ['y'] } } },
       ),
     ).toEqual({ db: { options: { host: 'a', port: 1, tags: ['x', 'y'] } } });
+  });
+
+  it('should replace values that are not plain objects', () => {
+    const date = new Date(1);
+    const map = new Map([['a', 1]]);
+    const config = merge({ date: new Date(0), map: new Map() }, { date, map });
+
+    expect(config['date']).toBe(date);
+    expect(config['map']).toBe(map);
   });
 
   it('should not change sources', () => {
