@@ -102,6 +102,8 @@ Gather offers a straightforward and intuitive API for defining and accessing con
 
 Gather gives you flexibility in defining your configuration by supporting various configuration providers, allowing you to choose the approach that best suits your needs. Each provider must produce a plain JavaScript object, or nothing (`undefined` or `null`), which is skipped.
 
+In TypeScript, the `ConfigProvider` type catches most invalid providers at compile time: arrays, Promises, Maps and Sets, `async` functions, functions that take arguments, and classes that need constructor arguments or have no `register` method.
+
 ### Plain objects
 
 Supply configuration directly as an object literal.
@@ -134,7 +136,7 @@ Providers are synchronous: a function that returns a Promise, such as an `async`
 
 ### Module classes
 
-Implement the `Module` interface with a `register` method that returns the configuration object. You can pass either a class or an instance to the Gather constructor.
+Implement the `Module` interface with a `register` method that returns the configuration object. You can pass either a class or an instance to the Gather constructor. Classes compiled to ES5 or by Babel work too: any function whose prototype has a `register` method is constructed with `new`.
 
 ```ts
 import type { Module } from '@armscye/module';

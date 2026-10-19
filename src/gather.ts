@@ -1,21 +1,46 @@
 import type { Type } from '@armscye/core';
 import type { Module } from '@armscye/module';
 import { isFunction, isNil, isObject, isPlainObject } from '@hemjs/notions';
-import { uid } from 'uid';
 
 import { merge } from './utils.js';
 
-export type ConfigProvider =
-  Type<Module> | Record<string, any> | ((...args: any[]) => any);
+/**
+ * A config object. Arrays, Promises, Maps, Sets and functions are rejected at
+ * compile time; at runtime, Gather also requires a plain object.
+ */
+export type ConfigObject = {
+  [key: string]: any;
+  apply?: never;
+  then?: never;
+  [Symbol.iterator]?: never;
+};
 
 /**
- * Check if the given value is a class. Unlike a `toString` check for
- * `'class '`, this also matches minified classes written as `class{`.
+ * Something Gather can read config from: a module class, a module instance,
+ * a function returning a config object, or a config object.
+ */
+export type ConfigProvider =
+  | (new () => Module)
+  | Module
+  | (() => ConfigObject | null | undefined | void)
+  | ConfigObject;
+
+/**
+ * Check if the given value is a class, so it must be called with `new`.
+ *
+ * Matches class syntax, including minified `class{`, and any function whose
+ * prototype has a `register` method. The second check covers module classes
+ * that are transpiled (TypeScript ES5 output, Babel) or wrapped in a Proxy,
+ * whose source text does not start with `class`.
  */
 function isClass(value: unknown): value is Type<Module> {
+  if (!isFunction(value)) {
+    return false;
+  }
+  const prototype = value.prototype as Partial<Module> | undefined;
   return (
-    isFunction(value) &&
-    /^class[\s{]/.test(Function.prototype.toString.call(value))
+    /^class[\s{]/.test(Function.prototype.toString.call(value)) ||
+    isFunction(prototype?.register)
   );
 }
 
@@ -91,7 +116,8 @@ export class Gather {
   }
 
   /**
-   * Resolve a provider to an object: instantiate classes and wrap functions.
+   * Resolve a provider to an object: instantiate classes and wrap functions
+   * as modules.
    * @param provider the provider to resolve
    * @param index the position of the provider
    * @returns the resolved provider
@@ -113,16 +139,15 @@ export class Gather {
     if (isClass(provider)) {
       return this.invoke(index, () => new provider());
     }
+    if (isFunction(provider)) {
+      return { register: () => provider() };
+    }
     if (isObject(provider)) {
       return provider;
     }
-    if (!isFunction(provider)) {
-      throw new Error(
-        `Invalid config provider at index ${index}: expected a class, function or object, got ${describeValue(provider)}`,
-      );
-    }
-    const metatype = this.mapToClass(provider);
-    return new metatype();
+    throw new Error(
+      `Invalid config provider at index ${index}: expected a class, function or object, got ${describeValue(provider)}`,
+    );
   }
 
   /**
@@ -167,33 +192,5 @@ export class Gather {
       );
     }
     return config;
-  }
-
-  /**
-   * Map a function to a class.
-   * @param instance the function to map
-   * @returns the resulting class
-   */
-  private mapToClass<T extends (...args: any[]) => any>(
-    instance: T,
-  ): Type<Module> {
-    return this.assignToken(
-      class {
-        register = (...params: Array<unknown>) => {
-          return instance(...params);
-        };
-      },
-    );
-  }
-
-  /**
-   * Assign unique token to a metatype.
-   * @param metatype the metatype to assign token
-   * @param token the unique token
-   * @returns the resulting metatype
-   */
-  private assignToken(metatype: Type<Module>, token = uid(21)): Type<Module> {
-    Object.defineProperty(metatype, 'name', { value: token });
-    return metatype;
   }
 }

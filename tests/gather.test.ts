@@ -1,4 +1,4 @@
-import { expect, test } from 'vitest';
+import { expect, expectTypeOf, test } from 'vitest';
 
 import { Gather, type ConfigProvider } from '../src/index.js';
 import { BarProvider } from './fixtures/bar.provider.js';
@@ -26,6 +26,7 @@ test('should merge config when instance providers', () => {
 });
 
 test('should merge config when noop providers', () => {
+  // @ts-expect-error a class without register() is skipped at runtime, but rejected by the type
   const gather = new Gather([BarProvider, NoopProvider]);
   const config = gather.getMerged();
 
@@ -94,18 +95,21 @@ test('should throw with the index when invalid provider', () => {
 });
 
 test('should throw when array provider', () => {
+  // @ts-expect-error an array is not a provider
   expect(() => new Gather([[{ foo: 'bar' }]])).toThrow(
     'Invalid config provider at index 0: got an array',
   );
 });
 
 test('should throw when async provider', () => {
+  // @ts-expect-error async providers are not supported
   expect(() => new Gather([() => Promise.resolve({ foo: 'bar' })])).toThrow(
     'Invalid config from provider at index 0: expected a plain object, got a Promise',
   );
 });
 
 test('should throw when a promise is passed as a provider', () => {
+  // @ts-expect-error a Promise is not a provider
   expect(() => new Gather([{}, Promise.resolve({ foo: 'bar' })])).toThrow(
     'Invalid config provider at index 1: got a Promise (async providers are not supported)',
   );
@@ -122,6 +126,7 @@ test('should throw when provider returns a class instance', () => {
 });
 
 test('should throw when provider returns a non-object', () => {
+  // @ts-expect-error a function must return a config object, not an array
   expect(() => new Gather([() => ['foo']])).toThrow('got an array');
   expect(() => new Gather([{ register: () => 'foo' }])).toThrow('got string');
   expect(() => new Gather([() => new Date()])).toThrow(
@@ -205,4 +210,72 @@ test('should name the provider when it throws a non-error', () => {
         },
       ]),
   ).toThrow('Config provider at index 0 threw: boom');
+});
+
+test('should instantiate transpiled and proxied module classes', () => {
+  // What TypeScript emits for a class when targeting ES5.
+  function Es5Module(this: { prefix: string }) {
+    this.prefix = 'es5';
+  }
+  Es5Module.prototype.register = function (this: { prefix: string }) {
+    return { es5: this.prefix };
+  };
+
+  // What Babel emits: calling the class without `new` throws.
+  function BabelModule(this: unknown) {
+    if (!(this instanceof BabelModule)) {
+      throw new TypeError('Cannot call a class as a function');
+    }
+  }
+  BabelModule.prototype.register = () => ({ babel: true });
+
+  const Proxied = new Proxy(BarProvider, {});
+
+  const gather = new Gather([
+    Es5Module,
+    BabelModule,
+    Proxied,
+  ] as ConfigProvider[]);
+
+  expect(gather.getMerged()).toEqual({ es5: 'es5', babel: true, bar: 'bat' });
+});
+
+test('should call plain functions that have a prototype', () => {
+  function provider() {
+    return { foo: 'bar' };
+  }
+
+  expect(new Gather([provider]).getMerged()).toEqual({ foo: 'bar' });
+});
+
+test('should type providers by what Gather can read', () => {
+  interface AppConfig {
+    port: number;
+    size: number;
+  }
+  class NeedsArgument {
+    constructor(readonly name: string) {}
+    register() {
+      return {};
+    }
+  }
+
+  expectTypeOf<AppConfig>().toExtend<ConfigProvider>();
+  expectTypeOf<() => AppConfig>().toExtend<ConfigProvider>();
+  expectTypeOf<() => void>().toExtend<ConfigProvider>();
+  expectTypeOf(BarProvider).toExtend<ConfigProvider>();
+  expectTypeOf(new BarProvider()).toExtend<ConfigProvider>();
+  expectTypeOf({
+    foo: 'bar',
+    nested: { list: [1] },
+  }).toExtend<ConfigProvider>();
+
+  expectTypeOf<string>().not.toExtend<ConfigProvider>();
+  expectTypeOf<Array<{ foo: string }>>().not.toExtend<ConfigProvider>();
+  expectTypeOf<Promise<{ foo: string }>>().not.toExtend<ConfigProvider>();
+  expectTypeOf<Map<string, unknown>>().not.toExtend<ConfigProvider>();
+  expectTypeOf<() => Promise<AppConfig>>().not.toExtend<ConfigProvider>();
+  expectTypeOf<(env: string) => AppConfig>().not.toExtend<ConfigProvider>();
+  expectTypeOf(NeedsArgument).not.toExtend<ConfigProvider>();
+  expectTypeOf(NoopProvider).not.toExtend<ConfigProvider>();
 });
