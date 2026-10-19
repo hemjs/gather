@@ -4,8 +4,26 @@ import { isFunction, isNil, isObject, isPlainObject } from '@hemjs/notions';
 
 import { merge } from './utils.js';
 
+/**
+ * A config object. Arrays, Promises, Maps, Sets and functions are rejected at
+ * compile time; at runtime, Gather also requires a plain object.
+ */
+export type ConfigObject = {
+  [key: string]: any;
+  apply?: never;
+  then?: never;
+  [Symbol.iterator]?: never;
+};
+
+/**
+ * Something Gather can read config from: a module class, a module instance,
+ * a function returning a config object, or a config object.
+ */
 export type ConfigProvider =
-  Type<Module> | Record<string, any> | ((...args: any[]) => any);
+  | (new () => Module)
+  | Module
+  | (() => ConfigObject | null | undefined | void)
+  | ConfigObject;
 
 /**
  * Check if the given value is a class, so it must be called with `new`.

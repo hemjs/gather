@@ -102,6 +102,8 @@ Gather offers a straightforward and intuitive API for defining and accessing con
 
 Gather gives you flexibility in defining your configuration by supporting various configuration providers, allowing you to choose the approach that best suits your needs. Each provider must produce a plain JavaScript object, or nothing (`undefined` or `null`), which is skipped.
 
+In TypeScript, the `ConfigProvider` type catches most invalid providers at compile time: arrays, Promises, Maps and Sets, `async` functions, functions that take arguments, and classes that need constructor arguments or have no `register` method.
+
 ### Plain objects
 
 Supply configuration directly as an object literal.
