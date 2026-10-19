@@ -206,3 +206,39 @@ test('should name the provider when it throws a non-error', () => {
       ]),
   ).toThrow('Config provider at index 0 threw: boom');
 });
+
+test('should instantiate transpiled and proxied module classes', () => {
+  // What TypeScript emits for a class when targeting ES5.
+  function Es5Module(this: { prefix: string }) {
+    this.prefix = 'es5';
+  }
+  Es5Module.prototype.register = function (this: { prefix: string }) {
+    return { es5: this.prefix };
+  };
+
+  // What Babel emits: calling the class without `new` throws.
+  function BabelModule(this: unknown) {
+    if (!(this instanceof BabelModule)) {
+      throw new TypeError('Cannot call a class as a function');
+    }
+  }
+  BabelModule.prototype.register = () => ({ babel: true });
+
+  const Proxied = new Proxy(BarProvider, {});
+
+  const gather = new Gather([
+    Es5Module,
+    BabelModule,
+    Proxied,
+  ] as ConfigProvider[]);
+
+  expect(gather.getMerged()).toEqual({ es5: 'es5', babel: true, bar: 'bat' });
+});
+
+test('should call plain functions that have a prototype', () => {
+  function provider() {
+    return { foo: 'bar' };
+  }
+
+  expect(new Gather([provider]).getMerged()).toEqual({ foo: 'bar' });
+});

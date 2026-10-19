@@ -8,13 +8,21 @@ export type ConfigProvider =
   Type<Module> | Record<string, any> | ((...args: any[]) => any);
 
 /**
- * Check if the given value is a class. Unlike a `toString` check for
- * `'class '`, this also matches minified classes written as `class{`.
+ * Check if the given value is a class, so it must be called with `new`.
+ *
+ * Matches class syntax, including minified `class{`, and any function whose
+ * prototype has a `register` method. The second check covers module classes
+ * that are transpiled (TypeScript ES5 output, Babel) or wrapped in a Proxy,
+ * whose source text does not start with `class`.
  */
 function isClass(value: unknown): value is Type<Module> {
+  if (!isFunction(value)) {
+    return false;
+  }
+  const prototype = value.prototype as Partial<Module> | undefined;
   return (
-    isFunction(value) &&
-    /^class[\s{]/.test(Function.prototype.toString.call(value))
+    /^class[\s{]/.test(Function.prototype.toString.call(value)) ||
+    isFunction(prototype?.register)
   );
 }
 

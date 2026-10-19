@@ -134,7 +134,7 @@ Providers are synchronous: a function that returns a Promise, such as an `async`
 
 ### Module classes
 
-Implement the `Module` interface with a `register` method that returns the configuration object. You can pass either a class or an instance to the Gather constructor.
+Implement the `Module` interface with a `register` method that returns the configuration object. You can pass either a class or an instance to the Gather constructor. Classes compiled to ES5 or by Babel work too: any function whose prototype has a `register` method is constructed with `new`.
 
 ```ts
 import type { Module } from '@armscye/module';
