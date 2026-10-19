@@ -105,6 +105,22 @@ test('should throw when async provider', () => {
   );
 });
 
+test('should throw when a promise is passed as a provider', () => {
+  expect(() => new Gather([{}, Promise.resolve({ foo: 'bar' })])).toThrow(
+    'Invalid config provider at index 1: got a Promise (async providers are not supported)',
+  );
+});
+
+test('should throw when provider returns a class instance', () => {
+  class DbConfig {
+    host = 'localhost';
+  }
+
+  expect(() => new Gather([() => new DbConfig()])).toThrow(
+    'expected a plain object, got an instance of DbConfig',
+  );
+});
+
 test('should throw when provider returns a non-object', () => {
   expect(() => new Gather([() => ['foo']])).toThrow('got an array');
   expect(() => new Gather([{ register: () => 'foo' }])).toThrow('got string');
@@ -138,4 +154,55 @@ test('should treat an object with a register function as a module', () => {
   const gather = new Gather([{ register: () => ({ foo: 'bar' }), baz: 1 }]);
 
   expect(gather.getMerged()).toEqual({ foo: 'bar' });
+});
+
+test('should throw when the provider list has holes', () => {
+  const providers: ConfigProvider[] = [{}];
+  providers[2] = {};
+
+  expect(() => new Gather(providers)).toThrow(
+    'Invalid config provider at index 1: expected a class, function or object, got undefined',
+  );
+});
+
+test('should name the provider when it throws', () => {
+  const cause = new Error('boom');
+  class Failing {
+    constructor() {
+      throw cause;
+    }
+  }
+  const throwing = () => {
+    throw cause;
+  };
+
+  for (const provider of [
+    Failing,
+    throwing,
+    { register: throwing },
+  ] as ConfigProvider[]) {
+    let error: unknown;
+    try {
+      new Gather([{}, provider]);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      'Config provider at index 1 threw: boom',
+    );
+    expect((error as Error).cause).toBe(cause);
+  }
+});
+
+test('should name the provider when it throws a non-error', () => {
+  expect(
+    () =>
+      new Gather([
+        () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'boom';
+        },
+      ]),
+  ).toThrow('Config provider at index 0 threw: boom');
 });

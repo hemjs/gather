@@ -20,13 +20,20 @@ function isClass(value: unknown): value is Type<Module> {
 }
 
 /**
+ * Check if the given value is a Promise or another thenable.
+ */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return isFunction((value as { then?: unknown } | null)?.then);
+}
+
+/**
  * Describe a value for an error message.
  */
 function describeValue(value: unknown): string {
   if (Array.isArray(value)) {
     return 'an array';
   }
-  if (isFunction((value as { then?: unknown } | null)?.then)) {
+  if (isThenable(value)) {
     return 'a Promise (async providers are not supported)';
   }
   if (value === null) {
@@ -70,14 +77,16 @@ export class Gather {
     providers: Array<ConfigProvider>,
   ): Record<string, any> {
     const merged: Record<string, any> = {};
-    providers.forEach((provider, index) => {
+    // Array.from turns holes into undefined, so they are reported, not skipped.
+    for (const [index, provider] of Array.from(providers).entries()) {
       const instance = this.resolveProvider(provider, index);
       if (this.isModuleProvider(instance)) {
-        merge(merged, this.assertConfig(instance.register(), index));
+        const config = this.invoke(index, () => instance.register());
+        merge(merged, this.assertConfig(config, index));
       } else if (isPlainObject(instance)) {
         merge(merged, instance);
       }
-    });
+    }
     return merged;
   }
 
@@ -96,8 +105,13 @@ export class Gather {
         `Invalid config provider at index ${index}: got an array; pass its items as separate providers`,
       );
     }
+    if (isThenable(provider)) {
+      throw new Error(
+        `Invalid config provider at index ${index}: got ${describeValue(provider)}`,
+      );
+    }
     if (isClass(provider)) {
-      return new provider();
+      return this.invoke(index, () => new provider());
     }
     if (isObject(provider)) {
       return provider;
@@ -109,6 +123,23 @@ export class Gather {
     }
     const metatype = this.mapToClass(provider);
     return new metatype();
+  }
+
+  /**
+   * Run provider code, naming the provider in any error it throws.
+   * @param index the position of the provider
+   * @param fn the provider code to run
+   * @returns what the provider code returned
+   */
+  private invoke<T>(index: number, fn: () => T): T {
+    try {
+      return fn();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Config provider at index ${index} threw: ${message}`, {
+        cause: error,
+      });
+    }
   }
 
   /**

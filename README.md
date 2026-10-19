@@ -37,18 +37,18 @@ import { Gather } from '@hemjs/gather';
 
 const gather = new Gather([
   {
-    port: parseInt(process.env.PORT, 10) || 3000,
+    port: Number(process.env.PORT) || 3000,
   },
   {
     database: {
       host: process.env.DATABASE_HOST || 'localhost',
-      port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
+      port: Number(process.env.DATABASE_PORT) || 5432,
     },
   },
   () => {
     if (process.env.NODE_ENV === 'production') {
       return {
-        logLevel: 'warning',
+        logLevel: 'warn',
       };
     }
     return {
@@ -153,11 +153,17 @@ Any object with a `register` method is treated as a module, including a plain ob
 
 ### Errors
 
-Gather throws when a provider is not a class, function or object, when it is an array, or when it produces something other than a plain object. The message names the position of the provider in the list:
+Gather throws when a provider is not a class, function or object, when it is an array or a Promise, or when it produces something other than a plain object, including a class instance. The message names the position of the provider in the list:
 
 ```txt
 Invalid config provider at index 1: expected a class, function or object, got number
 Invalid config from provider at index 0: expected a plain object, got a Promise (async providers are not supported)
+```
+
+An error thrown by a provider itself, from its constructor, its `register` method or the function, is rethrown with the same position. The original error is kept as `cause`:
+
+```txt
+Config provider at index 2 threw: Cannot read properties of undefined (reading 'split')
 ```
 
 ## Merge behavior
@@ -169,7 +175,7 @@ Providers are merged in the order they are given, so later providers win. The `m
 - **`null` and `undefined`** values are skipped: they never remove or overwrite an existing value.
 - **Anything else**, including strings, numbers, dates, maps and class instances, replaces the existing value.
 
-Merged objects and arrays are copies, so merging never changes a provider's objects.
+Merging never changes a provider's objects: objects and arrays that are merged are copied first. The copies are shallow, so values inside them, such as the objects in an array, are shared with the provider. `getMerged()` returns the same object on every call, so copy it before changing it.
 
 ```ts
 const gather = new Gather([
