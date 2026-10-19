@@ -1,7 +1,6 @@
 import type { Type } from '@armscye/core';
 import type { Module } from '@armscye/module';
 import { isFunction, isNil, isObject, isPlainObject } from '@hemjs/notions';
-import { uid } from 'uid';
 
 import { merge } from './utils.js';
 
@@ -91,7 +90,8 @@ export class Gather {
   }
 
   /**
-   * Resolve a provider to an object: instantiate classes and wrap functions.
+   * Resolve a provider to an object: instantiate classes and wrap functions
+   * as modules.
    * @param provider the provider to resolve
    * @param index the position of the provider
    * @returns the resolved provider
@@ -113,16 +113,15 @@ export class Gather {
     if (isClass(provider)) {
       return this.invoke(index, () => new provider());
     }
+    if (isFunction(provider)) {
+      return { register: () => provider() };
+    }
     if (isObject(provider)) {
       return provider;
     }
-    if (!isFunction(provider)) {
-      throw new Error(
-        `Invalid config provider at index ${index}: expected a class, function or object, got ${describeValue(provider)}`,
-      );
-    }
-    const metatype = this.mapToClass(provider);
-    return new metatype();
+    throw new Error(
+      `Invalid config provider at index ${index}: expected a class, function or object, got ${describeValue(provider)}`,
+    );
   }
 
   /**
@@ -167,33 +166,5 @@ export class Gather {
       );
     }
     return config;
-  }
-
-  /**
-   * Map a function to a class.
-   * @param instance the function to map
-   * @returns the resulting class
-   */
-  private mapToClass<T extends (...args: any[]) => any>(
-    instance: T,
-  ): Type<Module> {
-    return this.assignToken(
-      class {
-        register = (...params: Array<unknown>) => {
-          return instance(...params);
-        };
-      },
-    );
-  }
-
-  /**
-   * Assign unique token to a metatype.
-   * @param metatype the metatype to assign token
-   * @param token the unique token
-   * @returns the resulting metatype
-   */
-  private assignToken(metatype: Type<Module>, token = uid(21)): Type<Module> {
-    Object.defineProperty(metatype, 'name', { value: token });
-    return metatype;
   }
 }
