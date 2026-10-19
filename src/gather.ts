@@ -1,18 +1,23 @@
 import type { Type } from '@armscye/core';
 import type { Module } from '@armscye/module';
-import {
-  isClass,
-  isFunction,
-  isNil,
-  isObject,
-  isPlainObject,
-} from '@hemjs/notions';
+import { isFunction, isNil, isObject, isPlainObject } from '@hemjs/notions';
 import { uid } from 'uid';
 
 import { merge } from './utils.js';
 
 export type ConfigProvider =
   Type<Module> | Record<string, any> | ((...args: any[]) => any);
+
+/**
+ * Check if the given value is a class. Unlike a `toString` check for
+ * `'class '`, this also matches minified classes written as `class{`.
+ */
+function isClass(value: unknown): value is Type<Module> {
+  return (
+    isFunction(value) &&
+    /^class[\s{]/.test(Function.prototype.toString.call(value))
+  );
+}
 
 /**
  * Describe a value for an error message.
@@ -91,12 +96,11 @@ export class Gather {
         `Invalid config provider at index ${index}: got an array; pass its items as separate providers`,
       );
     }
+    if (isClass(provider)) {
+      return new provider();
+    }
     if (isObject(provider)) {
       return provider;
-    }
-    if (isClass(provider)) {
-      const typeProvider = provider as Type<any>;
-      return new typeProvider();
     }
     if (!isFunction(provider)) {
       throw new Error(

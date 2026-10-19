@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { Gather } from '../src/index.js';
+import { Gather, type ConfigProvider } from '../src/index.js';
 import { BarProvider } from './fixtures/bar.provider.js';
 import { FooProvider } from './fixtures/foo.provider.js';
 import { NoopProvider } from './fixtures/noop.provider.js';
@@ -120,6 +120,18 @@ test('should skip providers that return nothing', () => {
   const gather = new Gather([() => undefined, BarProvider]);
 
   expect(gather.getMerged()).toEqual({ bar: 'bat' });
+});
+
+test('should instantiate classes written without a space before the body', () => {
+  // A minified class; `new Function` keeps the transpiler from reformatting it.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval
+  const createMinified = new Function(
+    'return class{register(){return {foo: "bar"}}}',
+  ) as () => ConfigProvider;
+  const Minified = createMinified();
+  const gather = new Gather([Minified]);
+
+  expect(gather.getMerged()).toEqual({ foo: 'bar' });
 });
 
 test('should treat an object with a register function as a module', () => {
