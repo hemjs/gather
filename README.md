@@ -160,6 +160,12 @@ Invalid config provider at index 1: expected a class, function or object, got nu
 Invalid config from provider at index 0: expected a plain object, got a Promise (async providers are not supported)
 ```
 
+An error thrown by a provider itself, from its constructor, its `register` method or the function, is rethrown with the same position. The original error is kept as `cause`:
+
+```txt
+Config provider at index 2 threw: Cannot read properties of undefined (reading 'split')
+```
+
 ## Merge behavior
 
 Providers are merged in the order they are given, so later providers win. The `merge` function, also exported, applies these rules to each key:

@@ -81,7 +81,8 @@ export class Gather {
     for (const [index, provider] of Array.from(providers).entries()) {
       const instance = this.resolveProvider(provider, index);
       if (this.isModuleProvider(instance)) {
-        merge(merged, this.assertConfig(instance.register(), index));
+        const config = this.invoke(index, () => instance.register());
+        merge(merged, this.assertConfig(config, index));
       } else if (isPlainObject(instance)) {
         merge(merged, instance);
       }
@@ -110,7 +111,7 @@ export class Gather {
       );
     }
     if (isClass(provider)) {
-      return new provider();
+      return this.invoke(index, () => new provider());
     }
     if (isObject(provider)) {
       return provider;
@@ -122,6 +123,23 @@ export class Gather {
     }
     const metatype = this.mapToClass(provider);
     return new metatype();
+  }
+
+  /**
+   * Run provider code, naming the provider in any error it throws.
+   * @param index the position of the provider
+   * @param fn the provider code to run
+   * @returns what the provider code returned
+   */
+  private invoke<T>(index: number, fn: () => T): T {
+    try {
+      return fn();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Config provider at index ${index} threw: ${message}`, {
+        cause: error,
+      });
+    }
   }
 
   /**

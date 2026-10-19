@@ -164,3 +164,45 @@ test('should throw when the provider list has holes', () => {
     'Invalid config provider at index 1: expected a class, function or object, got undefined',
   );
 });
+
+test('should name the provider when it throws', () => {
+  const cause = new Error('boom');
+  class Failing {
+    constructor() {
+      throw cause;
+    }
+  }
+  const throwing = () => {
+    throw cause;
+  };
+
+  for (const provider of [
+    Failing,
+    throwing,
+    { register: throwing },
+  ] as ConfigProvider[]) {
+    let error: unknown;
+    try {
+      new Gather([{}, provider]);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      'Config provider at index 1 threw: boom',
+    );
+    expect((error as Error).cause).toBe(cause);
+  }
+});
+
+test('should name the provider when it throws a non-error', () => {
+  expect(
+    () =>
+      new Gather([
+        () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'boom';
+        },
+      ]),
+  ).toThrow('Config provider at index 0 threw: boom');
+});
