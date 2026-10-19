@@ -37,18 +37,18 @@ import { Gather } from '@hemjs/gather';
 
 const gather = new Gather([
   {
-    port: parseInt(process.env.PORT, 10) || 3000,
+    port: Number(process.env.PORT) || 3000,
   },
   {
     database: {
       host: process.env.DATABASE_HOST || 'localhost',
-      port: parseInt(process.env.DATABASE_PORT, 10) || 5432,
+      port: Number(process.env.DATABASE_PORT) || 5432,
     },
   },
   () => {
     if (process.env.NODE_ENV === 'production') {
       return {
-        logLevel: 'warning',
+        logLevel: 'warn',
       };
     }
     return {
@@ -175,7 +175,7 @@ Providers are merged in the order they are given, so later providers win. The `m
 - **`null` and `undefined`** values are skipped: they never remove or overwrite an existing value.
 - **Anything else**, including strings, numbers, dates, maps and class instances, replaces the existing value.
 
-Merged objects and arrays are copies, so merging never changes a provider's objects.
+Merging never changes a provider's objects: objects and arrays that are merged are copied first. The copies are shallow, so values inside them, such as the objects in an array, are shared with the provider. `getMerged()` returns the same object on every call, so copy it before changing it.
 
 ```ts
 const gather = new Gather([

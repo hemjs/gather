@@ -9,7 +9,8 @@ import { isNil, isPlainObject } from '@hemjs/notions';
  * - Any other value, including dates, maps and class instances, replaces the
  *   existing value.
  *
- * Merged arrays and objects are copies, so later merges never change a source.
+ * Merged arrays and objects are shallow copies, so merging never changes a
+ * source's own objects or arrays.
  */
 export function merge(
   target?: Record<string, any>,
