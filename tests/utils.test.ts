@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { merge } from '../src/index.js';
 
-describe('marge', () => {
+describe('merge', () => {
   it('should return empty object when absent target and absent source', () => {
     expect(merge()).toEqual({});
   });
@@ -51,5 +51,53 @@ describe('marge', () => {
 
   it('should return target when null source value', () => {
     expect(merge({ foo: 'bar' }, { foo: null })).toEqual({ foo: 'bar' });
+  });
+
+  it('should replace a non-array value with a source array', () => {
+    expect(merge({ foo: 'bar' }, { foo: ['baz'] })).toEqual({ foo: ['baz'] });
+    expect(merge({ foo: 1 }, { foo: ['baz'] })).toEqual({ foo: ['baz'] });
+    expect(merge({ foo: { bar: 1 } }, { foo: ['baz'] })).toEqual({
+      foo: ['baz'],
+    });
+  });
+
+  it('should replace an array with a source object', () => {
+    expect(merge({ foo: ['bar'] }, { foo: { baz: 1 } })).toEqual({
+      foo: { baz: 1 },
+    });
+  });
+
+  it('should merge nested objects recursively', () => {
+    expect(
+      merge(
+        { db: { options: { host: 'a', tags: ['x'] } } },
+        { db: { options: { port: 1, tags: ['y'] } } },
+      ),
+    ).toEqual({ db: { options: { host: 'a', port: 1, tags: ['x', 'y'] } } });
+  });
+
+  it('should replace values that are not plain objects', () => {
+    const date = new Date(1);
+    const map = new Map([['a', 1]]);
+    const config = merge({ date: new Date(0), map: new Map() }, { date, map });
+
+    expect(config['date']).toBe(date);
+    expect(config['map']).toBe(map);
+  });
+
+  it('should not change sources', () => {
+    const first = { foo: { bar: ['a'] } };
+    const second = { foo: { bar: ['b'] } };
+    merge({}, first, second);
+
+    expect(first).toEqual({ foo: { bar: ['a'] } });
+    expect(second).toEqual({ foo: { bar: ['b'] } });
+  });
+
+  it('should ignore __proto__ keys', () => {
+    const config = merge({}, JSON.parse('{"__proto__": {"polluted": true}}'));
+
+    expect(Object.getPrototypeOf(config)).toBe(Object.prototype);
+    expect(config['polluted']).toBeUndefined();
   });
 });
