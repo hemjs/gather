@@ -20,9 +20,9 @@ export function merge(
     if (isNil(source)) {
       continue;
     }
-    for (const key in source) {
-      const value = (source as Record<string, unknown>)[key];
-      if (isNil(value)) {
+    for (const [key, value] of Object.entries(source)) {
+      // Assigning `__proto__` would replace the target's prototype.
+      if (key === '__proto__' || isNil(value)) {
         continue;
       }
       const existing = target[key];

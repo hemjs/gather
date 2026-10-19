@@ -93,4 +93,11 @@ describe('merge', () => {
     expect(first).toEqual({ foo: { bar: ['a'] } });
     expect(second).toEqual({ foo: { bar: ['b'] } });
   });
+
+  it('should ignore __proto__ keys', () => {
+    const config = merge({}, JSON.parse('{"__proto__": {"polluted": true}}'));
+
+    expect(Object.getPrototypeOf(config)).toBe(Object.prototype);
+    expect(config['polluted']).toBeUndefined();
+  });
 });
