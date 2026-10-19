@@ -15,7 +15,7 @@ export function merge(
           obj = isNil(obj) ? [] : obj;
           target[key] = (obj as unknown[]).concat(value);
         } else if (isObject(obj) && isObject(value)) {
-          target[key] = { ...obj, ...value };
+          target[key] = merge({ ...obj }, value);
         } else {
           target[key] = value;
         }

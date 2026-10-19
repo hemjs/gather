@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { merge } from '../src/index.js';
 
-describe('marge', () => {
+describe('merge', () => {
   it('should return empty object when absent target and absent source', () => {
     expect(merge()).toEqual({});
   });
@@ -51,5 +51,23 @@ describe('marge', () => {
 
   it('should return target when null source value', () => {
     expect(merge({ foo: 'bar' }, { foo: null })).toEqual({ foo: 'bar' });
+  });
+
+  it('should merge nested objects recursively', () => {
+    expect(
+      merge(
+        { db: { options: { host: 'a', tags: ['x'] } } },
+        { db: { options: { port: 1, tags: ['y'] } } },
+      ),
+    ).toEqual({ db: { options: { host: 'a', port: 1, tags: ['x', 'y'] } } });
+  });
+
+  it('should not change sources', () => {
+    const first = { foo: { bar: ['a'] } };
+    const second = { foo: { bar: ['b'] } };
+    merge({}, first, second);
+
+    expect(first).toEqual({ foo: { bar: ['a'] } });
+    expect(second).toEqual({ foo: { bar: ['b'] } });
   });
 });
