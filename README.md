@@ -100,7 +100,7 @@ Gather offers a straightforward and intuitive API for defining and accessing con
 
 ## Config providers
 
-Gather gives you flexibility in defining your configuration by supporting various configuration providers, allowing you to choose the approach that best suits your needs. Each provider should return a plain JavaScript object to be merged.
+Gather gives you flexibility in defining your configuration by supporting various configuration providers, allowing you to choose the approach that best suits your needs. Each provider must produce a plain JavaScript object, or nothing (`undefined` or `null`), which is skipped.
 
 ### Plain objects
 
@@ -115,11 +115,11 @@ const config = {
 
 ### Functions
 
-Provide a function that returns a configuration object.
+Provide a function that returns a configuration object. Gather calls it once, with no arguments.
 
 ```ts
-const getConfig = (env) => {
-  if (env === 'production') {
+const getConfig = () => {
+  if (process.env.NODE_ENV === 'production') {
     return {
       logLevel: 'warn',
     };
@@ -129,6 +129,8 @@ const getConfig = (env) => {
   };
 };
 ```
+
+Providers are synchronous: a function that returns a Promise, such as an `async` function, is rejected.
 
 ### Module classes
 
@@ -147,34 +149,36 @@ class MyModule implements Module {
 }
 ```
 
-Gather throws errors for invalid providers or during merging inconsistencies. Check the console for helpful error messages.
+Any object with a `register` method is treated as a module, including a plain object. Only what `register` returns is merged; the object's other keys are ignored. A class instance without a `register` method contributes nothing.
+
+### Errors
+
+Gather throws when a provider is not a class, function or object, when it is an array, or when it produces something other than a plain object. The message names the position of the provider in the list:
+
+```txt
+Invalid config provider at index 1: expected a class, function or object, got number
+Invalid config from provider at index 0: expected a plain object, got a Promise (async providers are not supported)
+```
 
 ## Merge behavior
 
-The `merge` function in the Gather library handles objects and arrays in a specific way to combine configurations from different sources effectively. Here's a breakdown:
+Providers are merged in the order they are given, so later providers win. The `merge` function, also exported, applies these rules to each key:
 
-### Objects:
+- **Plain objects** are merged recursively, at every depth, with the same rules.
+- **Arrays** are concatenated onto an existing array, keeping duplicates. An array replaces any value that is not an array.
+- **`null` and `undefined`** values are skipped: they never remove or overwrite an existing value.
+- **Anything else**, including strings, numbers, dates, maps and class instances, replaces the existing value.
 
-1. By default, objects are merged using a "shallow merge". This means that values from the source object directly overwrite existing values in the target object with the same key.
-2. If both the target and source objects have the same key with nested objects, those nested objects are further merged recursively using the same shallow merge approach.
-3. If a key in the source object is null, it effectively removes the corresponding key from the target object (essentially overriding it with null)
-
-```ts
-const gather = new Gather([{ foo: 'bar' }, { bar: 'baz' }, { bar: 'bat' }]);
-const config = gather.getMerged(); // { foo: 'bar', bar: 'bat' }
-```
-
-### Arrays:
-
-1. Gather combines arrays by adding the elements of the source array to the end of the target array, keeping duplicates.
-2. If the target value for a key is null or undefined, the source array entirely replaces it with the concatenated source array.
+Merged objects and arrays are copies, so merging never changes a provider's objects.
 
 ```ts
-const gather = new Gather([{ foo: 'bar' }, { bar: ['baz'] }, { bar: ['bat'] }]);
-const config = gather.getMerged(); // { foo: 'bar', bar: ['baz', 'bat'] }
+const gather = new Gather([
+  { foo: 'bar', db: { host: 'localhost', tags: ['a'] } },
+  { foo: 'baz', db: { port: 5432, tags: ['b'] } },
+]);
+const config = gather.getMerged();
+// { foo: 'baz', db: { host: 'localhost', port: 5432, tags: ['a', 'b'] } }
 ```
-
-You can customize the default merge behavior by extending the Gather class and overriding the `merge` method. This allows you to implement custom logic for handling specific data types or conflict resolution strategies.
 
 ## Tips
 
@@ -182,7 +186,6 @@ Here are some tips for using the Gather library effectively:
 
 - Categorize your configuration sources and prioritize them in the Gather constructor. This ensures important settings take precedence and avoids unexpected overrides.
 - Define complex configuration logic in Module classes for improved code organization and reuse.
-- The `merge` function allows customizing how objects are merged. Consider using deep merging for object properties to avoid data loss.
 - Write unit tests for your Module classes and Gather usage to ensure correct behavior and prevent regressions.
 - Use comments within your modules and Gather constructor to explain the purpose and structure of your configurations.
 
