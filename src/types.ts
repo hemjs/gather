@@ -16,9 +16,7 @@ export type ConfigObject = {
  * a function returning a config object, or a config object.
  */
 export type ConfigProvider =
-  | (new () => Module & {
-      register(): ConfigObject | null | undefined | void;
-    })
+  | (new () => Module<ConfigObject | null | undefined | void>)
   | Module
   | (() => ConfigObject | null | undefined | void)
   | ConfigObject;

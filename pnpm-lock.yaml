@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@armscye/module':
-        specifier: ^0.5.0
-        version: 0.5.0
+        specifier: ^0.6.0
+        version: 0.6.0
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 0.18.5
@@ -242,8 +242,8 @@ packages:
     resolution: {integrity: sha512-9ytjzGwxjm9Uz7I9avfbt5vlQt6uk9uRRESzJjqrznl6WKvI6dwYTo+vJ3U02Wrq/mR3iql/PzhvHhKdJIAjDQ==}
     engines: {node: '>=20'}
 
-  '@armscye/module@0.5.0':
-    resolution: {integrity: sha512-ql4hLcPlEp+V9QDmftqxmnT+xbrmcpmEDvHXFKnHUSYVfAOIQKLsjOriTMakOT4K8ZeT86RsfAdJ6RPTZsyCBw==}
+  '@armscye/module@0.6.0':
+    resolution: {integrity: sha512-+KOmdErAsimbg8fJS+10vFbUAyhetWWFGJgq8RoRYORKu3w+Q9u99Wmdq8yMgiulQGmpKHpk9SF1yUdPfGXH+A==}
     engines: {node: '>=22.12.0'}
 
   '@babel/code-frame@7.29.7':
@@ -2300,7 +2300,7 @@ snapshots:
       typescript: 5.6.1-rc
       validate-npm-package-name: 5.0.1
 
-  '@armscye/module@0.5.0': {}
+  '@armscye/module@0.6.0': {}
 
   '@babel/code-frame@7.29.7':
     dependencies:
