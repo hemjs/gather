@@ -50,9 +50,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@armscye/core": "^0.6.0",
-    "@armscye/module": "^0.5.0",
-    "@hemjs/notions": "^2.0.0"
+    "@armscye/module": "^0.5.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
