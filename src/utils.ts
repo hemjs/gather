@@ -1,45 +1,34 @@
-import { isNil, isPlainObject } from '@hemjs/notions';
+import type { Module } from '@armscye/module';
 
-/**
- * Merge sources into target, left to right, and return target.
- *
- * - `null` and `undefined` source values are skipped.
- * - Arrays are concatenated onto an existing array, or replace any other value.
- * - Plain objects are merged recursively into an existing plain object.
- * - Any other value, including dates, maps and class instances, replaces the
- *   existing value.
- *
- * Merged arrays and objects are shallow copies, so merging never changes a
- * source's own objects or arrays.
- */
-export function merge(
-  target?: Record<string, any>,
-  ...sources: Array<object | undefined | null>
-): Record<string, any> {
-  target = target || {};
-  for (const source of sources) {
-    if (isNil(source)) {
-      continue;
-    }
-    for (const [key, value] of Object.entries(source)) {
-      // Assigning `__proto__` would replace the target's prototype.
-      if (key === '__proto__' || isNil(value)) {
-        continue;
-      }
-      const existing = target[key];
-      if (Array.isArray(value)) {
-        target[key] = Array.isArray(existing)
-          ? [...existing, ...value]
-          : [...value];
-      } else if (isPlainObject(value)) {
-        target[key] = merge(
-          isPlainObject(existing) ? { ...existing } : {},
-          value,
-        );
-      } else {
-        target[key] = value;
-      }
-    }
+export function isPlainObject(value: unknown): value is Record<string, any> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
   }
-  return target;
+  const proto = Object.getPrototypeOf(value) as object | null;
+  return (
+    proto === null ||
+    proto === Object.prototype ||
+    (Object.getPrototypeOf(proto) === null &&
+      Object.hasOwn(proto, 'hasOwnProperty'))
+  );
+}
+
+export function isThenable(value: unknown): boolean {
+  return typeof (value as { then?: unknown } | null)?.then === 'function';
+}
+
+export function isConfigObject(value: unknown): value is Record<string, any> {
+  return isPlainObject(value) && !isThenable(value);
+}
+
+export function isClass(fn: object): boolean {
+  const { prototype } = fn as { prototype?: Partial<Module> };
+  return (
+    typeof prototype?.register === 'function' ||
+    /^class\b(?!\s*\()/.test(Function.prototype.toString.call(fn))
+  );
+}
+
+export function isModule(value: unknown): value is Module {
+  return typeof (value as Partial<Module> | null)?.register === 'function';
 }

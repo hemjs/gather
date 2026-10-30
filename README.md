@@ -1,16 +1,18 @@
 # @hemjs/gather
 
-> A lightweight library for collecting and seamlessly merging configuration from multiple sources.
+> A lightweight library for collecting and merging configuration from multiple sources.
+
+Gather reads configuration from a list of providers and merges it, in order, into one object. A provider can be a plain object, a function that returns one, or a module class or instance whose `register` method returns one. Nested objects merge at every depth, arrays are joined, and later providers win. Every error names the provider at fault by its position in the list. Everything is synchronous, and the only dependency, `@armscye/module`, provides types.
 
 ## Table of contents
 
 - [Installation](#installation)
 - [Quick start](#quick-start)
-- [Introduction](#introduction)
-- [Features](#features)
 - [Config providers](#config-providers)
+- [Errors](#errors)
 - [Merge behavior](#merge-behavior)
-- [Tips](#tips)
+- [Upgrading from 1.x](#upgrading-from-1x)
+- [License](#license)
 
 ## Installation
 
@@ -59,7 +61,7 @@ const gather = new Gather([
 
 const config = gather.getMerged();
 
-// Output:
+// With no environment variables set:
 // {
 //   port: 3000,
 //   database: {
@@ -72,37 +74,13 @@ const config = gather.getMerged();
 console.log(config);
 ```
 
-## Introduction
-
-Gather is a lightweight library that allows you to collect and combine configuration from multiple sources into a single, unified configuration object. It is designed to simplify your project structure and boost maintainability with an intuitive API and intelligent merging behavior.
-
-Using Gather library offers several benefits:
-
-- **Reduced complexity:** Centralizes configuration management, decluttering project structure and improving maintainability.
-- **Increased flexibility:** Adapts to various configuration needs based on environments, contexts, or specific requirements.
-- **Conflict resolution:** Reliable merging and conflict resolution ensure predictable behavior and consistent settings.
-
-Defining a configuration consists of constructing a `Gather` and merging objects and joining arrays from any number of providers.
-
-## Features
-
-### Flexibility
-
-Gather accomodates various configuration sources, including classes implementing the `Module` interface, plain objects, and functions. You can define your configuration in different modules or components, promoting cleaner structure and easier maintenance.
-
-### Merging power
-
-Gather seamlessly merges configuration from multiple sources, prioritizing them based on the order they're provided.The library uses intelligent logic to handle potentially conflicting settings, ensuring smooth integration and avoiding unexpected behavior.
-
-### Ease of use
-
-Gather offers a straightforward and intuitive API for defining and accessing configuration. The library has minimal external dependencies, keeping your project footprint optimized.
+Order the providers from defaults to overrides: when two providers set the same key, the later one wins.
 
 ## Config providers
 
-Gather gives you flexibility in defining your configuration by supporting various configuration providers, allowing you to choose the approach that best suits your needs. Each provider must produce a plain JavaScript object, or nothing (`undefined` or `null`), which is skipped.
+Each provider must produce a plain object, or nothing (`undefined` or `null`), which is skipped. A plain object is an object literal, an object with a `null` prototype, such as a module namespace (`import * as config from './config.js'`), or an object literal from another realm. A namespace's default export becomes a `default` key, so pass the default export itself (`import config from './config.js'`) when that is where the config is.
 
-In TypeScript, the `ConfigProvider` type catches most invalid providers at compile time: arrays, Promises, Maps and Sets, `async` functions, functions that take arguments, and classes that need constructor arguments or have no `register` method.
+In TypeScript, the `ConfigProvider` type catches many invalid providers at compile time: arrays, Promises, Maps and Sets, `async` functions, functions that take arguments, and classes that need constructor arguments, have no `register` method or have an `async` one. Some mistakes are caught only at runtime, such as an instance without a `register` method or a function that returns a class instance.
 
 ### Plain objects
 
@@ -151,33 +129,62 @@ class MyModule implements Module {
 }
 ```
 
-Any object with a `register` method is treated as a module, including a plain object. Only what `register` returns is merged; the object's other keys are ignored. A class instance without a `register` method contributes nothing.
+Any object with a `register` method is treated as a module, including a plain object. Only what `register` returns is merged; the object's other keys are ignored. A class, or a class instance, without a `register` method is rejected.
 
-### Errors
+Some classes cannot be told apart from a function, so Gather calls them without `new`, which fails: a bound class (`MyModule.bind(null)`), and a class compiled to ES5 or wrapped in a Proxy whose `register` is an instance field rather than a method. Pass the class itself, or define `register` as a method.
 
-Gather throws when a provider is not a class, function or object, when it is an array or a Promise, or when it produces something other than a plain object, including a class instance. The message names the position of the provider in the list:
+## Errors
+
+Gather's errors extend `GatherError`, which carries the position of the provider in the list as `index`:
+
+| Error                  | Thrown when                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `InvalidProviderError` | A provider is not a class, function, plain object or module; it is an array or a Promise; a class has no `register` method; or it produces something other than a plain object. |
+| `ProviderFailedError`  | A provider throws from its constructor, its `register` method or the function. The thrown value is kept as `cause`.                                                             |
 
 ```txt
-Invalid config provider at index 1: expected a class, function or object, got number
-Invalid config from provider at index 0: expected a plain object, got a Promise (async providers are not supported)
+InvalidProviderError: Invalid config provider at index 1: expected a class, function, plain object or module, got number
+InvalidProviderError: Invalid config provider at index 0: expected a plain object as config, got a Promise (async providers are not supported)
+ProviderFailedError: Config provider at index 2 threw: Cannot read properties of undefined (reading 'split')
 ```
 
-An error thrown by a provider itself, from its constructor, its `register` method or the function, is rethrown with the same position. The original error is kept as `cause`:
+A provider's own error is always wrapped, even when it is a `GatherError` from a `Gather` the provider uses itself, so `index` always refers to your list.
 
-```txt
-Config provider at index 2 threw: Cannot read properties of undefined (reading 'split')
+Gather expects config objects to be plain data. An error thrown by a getter on a config object, or while reading the list itself (by a generator, or because the list is not iterable), is not wrapped, and a config object that contains itself overflows the stack.
+
+To handle an error from your own code, check `cause`:
+
+```ts
+import { Gather, ProviderFailedError } from '@hemjs/gather';
+import { ZodError } from 'zod';
+
+let config: Record<string, any>;
+try {
+  config = new Gather(providers).getMerged();
+} catch (error) {
+  if (error instanceof ProviderFailedError && error.cause instanceof ZodError) {
+    console.error(
+      `Invalid config from provider ${error.index}:`,
+      error.cause.issues,
+    );
+    process.exit(1);
+  }
+  throw error;
+}
 ```
 
 ## Merge behavior
 
-Providers are merged in the order they are given, so later providers win. The `merge` function, also exported, applies these rules to each key:
+Providers are merged in the order they are given, so later providers win. They can be passed as an array or any other iterable, such as a Set or a generator.
+
+Each key is merged by these rules:
 
 - **Plain objects** are merged recursively, at every depth, with the same rules.
 - **Arrays** are concatenated onto an existing array, keeping duplicates. An array replaces any value that is not an array.
 - **`null` and `undefined`** values are skipped: they never remove or overwrite an existing value.
+- **`__proto__` keys** are skipped, so config parsed from JSON cannot replace an object's prototype.
+- **Symbol keys** are skipped: only string keys are merged.
 - **Anything else**, including strings, numbers, dates, maps and class instances, replaces the existing value.
-
-Merging never changes a provider's objects: objects and arrays that are merged are copied first. The copies are shallow, so values inside them, such as the objects in an array, are shared with the provider. `getMerged()` returns the same object on every call, so copy it before changing it.
 
 ```ts
 const gather = new Gather([
@@ -188,14 +195,31 @@ const config = gather.getMerged();
 // { foo: 'baz', db: { host: 'localhost', port: 5432, tags: ['a', 'b'] } }
 ```
 
-## Tips
+Merging never changes a provider's objects: objects and arrays that are merged are copied first. The copies are shallow, so values inside them, such as the objects in an array, are shared with the provider. `getMerged()` returns the same object on every call, so copy it before changing it.
 
-Here are some tips for using the Gather library effectively:
+### The `merge` function
 
-- Categorize your configuration sources and prioritize them in the Gather constructor. This ensures important settings take precedence and avoids unexpected overrides.
-- Define complex configuration logic in Module classes for improved code organization and reuse.
-- Write unit tests for your Module classes and Gather usage to ensure correct behavior and prevent regressions.
-- Use comments within your modules and Gather constructor to explain the purpose and structure of your configurations.
+The same rules are exported as `merge(target, ...sources)`. It merges each source into `target`, left to right, changes `target` in place and returns it. Without a target, it starts from an empty object.
+
+```ts
+import { merge } from '@hemjs/gather';
+
+const defaults = { db: { host: 'localhost' }, plugins: ['core'] };
+merge(defaults, { db: { port: 5432 } }, { plugins: ['auth'] });
+// defaults is now { db: { host: 'localhost', port: 5432 }, plugins: ['core', 'auth'] }
+```
+
+## Upgrading from 1.x
+
+Version 2 merges config at every depth and reports invalid providers instead of skipping them. Most applications only need the changes in the first three items.
+
+- **ES modules.** Gather is published as an ES module and requires Node.js 22.12 or later. On those versions, CommonJS code can still `require()` it. Import from `@hemjs/gather` only: files inside the package, such as `dist/`, can no longer be imported directly.
+- **Nested objects merge at every depth.** In 1.x, nested objects merged one level deep, so `{ db: { pool: { min: 1 } } }` followed by `{ db: { pool: { max: 5 } } }` lost `min`. Both keys are now kept.
+- **Invalid providers throw.** A class or instance without a `register` method, a Promise, and a function or `register` method that returns something other than a plain object, such as an `async` function, now throw `InvalidProviderError`. In 1.x they were skipped, and their config was silently lost.
+- **Errors are exported and name the provider.** Errors extend `GatherError` and carry the provider's `index`. An error thrown by a provider is wrapped in `ProviderFailedError`, so code that caught a provider's own error type should check `error.cause`. Code that matched error message text may need updating.
+- **Mismatched values replace each other.** An array now replaces a value that is not an array, and an object replaces an array. In 1.x, these cases threw, joined strings, or turned arrays into objects.
+- **`__proto__` keys are skipped** instead of replacing the merged object's prototype.
+- **Types and dependencies.** `ConfigProvider` is narrower and rejects many invalid providers at compile time, and `ConfigObject` is new. Gather no longer depends on `@hemjs/notions` or `uid`, and now depends on `@armscye/module` for its types.
 
 ## License
 

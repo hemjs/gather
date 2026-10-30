@@ -1,3 +1,2 @@
 minimumReleaseAgeExclude:
   - '@armscye/*'
-  - '@hemjs/*'

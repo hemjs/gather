@@ -30,7 +30,7 @@
     },
     {
       "description": "Our own packages don't need a stability period.",
-      "matchPackageNames": ["@armscye/**", "@hemjs/**"],
+      "matchPackageNames": ["@armscye/**"],
       "minimumReleaseAge": null
     },
     {

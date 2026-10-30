@@ -1,196 +1,130 @@
-import type { Type } from '@armscye/core';
-import type { Module } from '@armscye/module';
-import { isFunction, isNil, isObject, isPlainObject } from '@hemjs/notions';
-
-import { merge } from './utils.js';
-
-/**
- * A config object. Arrays, Promises, Maps, Sets and functions are rejected at
- * compile time; at runtime, Gather also requires a plain object.
- */
-export type ConfigObject = {
-  [key: string]: any;
-  apply?: never;
-  then?: never;
-  [Symbol.iterator]?: never;
-};
+import { InvalidProviderError, ProviderFailedError } from './errors.js';
+import { merge } from './merge.js';
+import type { ConfigProvider } from './types.js';
+import {
+  isClass,
+  isConfigObject,
+  isModule,
+  isPlainObject,
+  isThenable,
+} from './utils.js';
 
 /**
- * Something Gather can read config from: a module class, a module instance,
- * a function returning a config object, or a config object.
+ * Collects config from providers and merges it, in order, into one object.
  */
-export type ConfigProvider =
-  | (new () => Module)
-  | Module
-  | (() => ConfigObject | null | undefined | void)
-  | ConfigObject;
+export class Gather {
+  private readonly config: Record<string, any> = {};
 
-/**
- * Check if the given value is a class, so it must be called with `new`.
- *
- * Matches class syntax, including minified `class{`, and any function whose
- * prototype has a `register` method. The second check covers module classes
- * that are transpiled (TypeScript ES5 output, Babel) or wrapped in a Proxy,
- * whose source text does not start with `class`.
- */
-function isClass(value: unknown): value is Type<Module> {
-  if (!isFunction(value)) {
-    return false;
+  /**
+   * Read every provider and merge its config, in order.
+   * @param providers the config providers, as an array or another iterable;
+   *   later providers win
+   * @throws {InvalidProviderError} if a provider, or its config, is invalid.
+   * @throws {ProviderFailedError} if a provider throws.
+   */
+  constructor(providers: Iterable<ConfigProvider> = []) {
+    let index = 0;
+    for (const provider of providers) {
+      merge(this.config, read(provider, index++));
+    }
   }
-  const prototype = value.prototype as Partial<Module> | undefined;
-  return (
-    /^class[\s{]/.test(Function.prototype.toString.call(value)) ||
-    isFunction(prototype?.register)
+
+  /** Returns the merged config; every call returns the same object. */
+  getMerged(): Record<string, any> {
+    return this.config;
+  }
+}
+
+function read(provider: unknown, index: number): object | undefined {
+  if (typeof provider === 'function') {
+    if (!isClass(provider)) {
+      return check(run(provider as () => unknown, index), index);
+    }
+    const instance = run(() => new (provider as new () => unknown)(), index);
+    if (!isModule(instance)) {
+      const name = provider.name || '(anonymous)';
+      throw reject(
+        instance,
+        index,
+        `expected class ${name} to have a register() method`,
+      );
+    }
+    provider = instance;
+  }
+  if (isModule(provider)) {
+    return check(
+      run(() => provider.register(), index),
+      index,
+    );
+  }
+  if (isConfigObject(provider)) {
+    return provider;
+  }
+  const hint = Array.isArray(provider)
+    ? '; pass its items as separate providers'
+    : '';
+  throw reject(
+    provider,
+    index,
+    'expected a class, function, plain object or module',
+    hint,
   );
 }
 
-/**
- * Check if the given value is a Promise or another thenable.
- */
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return isFunction((value as { then?: unknown } | null)?.then);
+function check(config: unknown, index: number): object | undefined {
+  if (config == null) {
+    return undefined;
+  }
+  if (isConfigObject(config)) {
+    return config;
+  }
+  throw reject(config, index, 'expected a plain object as config');
 }
 
-/**
- * Describe a value for an error message.
- */
-function describeValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return 'an array';
+function run<T>(fn: () => T, index: number): T {
+  try {
+    return fn();
+  } catch (error) {
+    throw new ProviderFailedError(index, error);
+  }
+}
+
+function reject(
+  value: unknown,
+  index: number,
+  expected: string,
+  hint = '',
+): InvalidProviderError {
+  // Handle a rejected Promise so it cannot crash the process.
+  try {
+    void Promise.prototype.then.call(value, undefined, () => {});
+  } catch {
+    // Not a native Promise.
+  }
+  return new InvalidProviderError(
+    index,
+    `${expected}, got ${describe(value)}${hint}`,
+  );
+}
+
+function describe(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value !== 'object') {
+    return typeof value;
   }
   if (isThenable(value)) {
     return 'a Promise (async providers are not supported)';
   }
-  if (value === null) {
-    return 'null';
+  if (Array.isArray(value)) {
+    return 'an array';
   }
-  if (isObject(value)) {
-    const name = value.constructor?.name;
-    return name ? `an instance of ${name}` : 'an object';
+  if (isPlainObject(value)) {
+    return 'a plain object';
   }
-  return typeof value;
-}
-
-/**
- * Gather configuration generated by configuration providers.
- */
-export class Gather {
-  private config: Record<string, any>;
-
-  /**
-   * Create a new Gather instance.
-   * @param providers the configuration providers
-   */
-  constructor(providers: Array<ConfigProvider> = []) {
-    this.config = this.loadFromProviders(providers);
-  }
-
-  /**
-   * Returns merged configurations object
-   * @returns merged configurations object
-   */
-  public getMerged(): Record<string, any> {
-    return this.config;
-  }
-
-  /**
-   * Iterate providers, merging config from each with the previous.
-   * @param providers an array of configuration providers
-   * @returns merged configurations object
-   */
-  private loadFromProviders(
-    providers: Array<ConfigProvider>,
-  ): Record<string, any> {
-    const merged: Record<string, any> = {};
-    // Array.from turns holes into undefined, so they are reported, not skipped.
-    for (const [index, provider] of Array.from(providers).entries()) {
-      const instance = this.resolveProvider(provider, index);
-      if (this.isModuleProvider(instance)) {
-        const config = this.invoke(index, () => instance.register());
-        merge(merged, this.assertConfig(config, index));
-      } else if (isPlainObject(instance)) {
-        merge(merged, instance);
-      }
-    }
-    return merged;
-  }
-
-  /**
-   * Resolve a provider to an object: instantiate classes and wrap functions
-   * as modules.
-   * @param provider the provider to resolve
-   * @param index the position of the provider
-   * @returns the resolved provider
-   */
-  private resolveProvider(
-    provider: ConfigProvider,
-    index: number,
-  ): ConfigProvider {
-    if (Array.isArray(provider)) {
-      throw new Error(
-        `Invalid config provider at index ${index}: got an array; pass its items as separate providers`,
-      );
-    }
-    if (isThenable(provider)) {
-      throw new Error(
-        `Invalid config provider at index ${index}: got ${describeValue(provider)}`,
-      );
-    }
-    if (isClass(provider)) {
-      return this.invoke(index, () => new provider());
-    }
-    if (isFunction(provider)) {
-      return { register: () => provider() };
-    }
-    if (isObject(provider)) {
-      return provider;
-    }
-    throw new Error(
-      `Invalid config provider at index ${index}: expected a class, function or object, got ${describeValue(provider)}`,
-    );
-  }
-
-  /**
-   * Run provider code, naming the provider in any error it throws.
-   * @param index the position of the provider
-   * @param fn the provider code to run
-   * @returns what the provider code returned
-   */
-  private invoke<T>(index: number, fn: () => T): T {
-    try {
-      return fn();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Config provider at index ${index} threw: ${message}`, {
-        cause: error,
-      });
-    }
-  }
-
-  /**
-   * Check if the given provider has the register method.
-   * @param provider the provider to check
-   * @returns whether the given provider has the register method
-   */
-  private isModuleProvider(provider: ConfigProvider): provider is Module {
-    return isFunction((provider as Partial<Module>).register);
-  }
-
-  /**
-   * Check that a provider produced a plain object, or nothing.
-   * @param config the value the provider produced
-   * @param index the position of the provider
-   * @returns the config
-   */
-  private assertConfig(config: unknown, index: number): object | undefined {
-    if (isNil(config)) {
-      return undefined;
-    }
-    if (!isPlainObject(config)) {
-      throw new Error(
-        `Invalid config from provider at index ${index}: expected a plain object, got ${describeValue(config)}`,
-      );
-    }
-    return config;
-  }
+  const name = (value.constructor as { name?: string } | undefined)?.name;
+  return name && name !== 'Object'
+    ? `an instance of ${name}`
+    : 'an object with a custom prototype';
 }
